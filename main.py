@@ -1,9 +1,12 @@
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QFileDialog, QWidget, QVBoxLayout
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QFileDialog, QWidget, QVBoxLayout, \
+    QHBoxLayout
 from PyQt5.QtGui import QFont, QColor
 from PyQt5.QtCore import Qt
 
 import sys
+
+from utils.combine_tools import combine_data
 
 
 class HeaderWidget(QWidget):
@@ -25,19 +28,16 @@ class HeaderWidget(QWidget):
         # Выравниваем текст по центру по горизонтальной оси
         self.header_main.setAlignment(Qt.AlignCenter)
 
-        # Устанавливаем начальное положение текста
-        self.update_header_size()
-
     def resizeEvent(self, event):
         # Вызываем метод при изменении размера виджета
-        self.update_header_size()
+        self.update_positions()
         super().resizeEvent(event)
 
-    def update_header_size(self):
+    def update_positions(self):
         label_width = self.width()  # Ширина текста равна ширине виджета
         label_height = 40  # Высота текста
         label_x = 0  # X-координата текста начинается с нуля
-        label_y = int(self.height() * 0.2)  # Округляем до целого числа
+        label_y = 0  # Округляем до целого числа
         self.header_main.setGeometry(label_x, label_y, label_width, label_height)
 
 
@@ -48,18 +48,20 @@ class FileSelectionWidget(QWidget):
         # Создаем кнопку для выбора файлов
         self.select_files_button = QPushButton(self)
         self.select_files_button.setText("SELECT")
+        self.select_files_button.setMaximumWidth(100)
 
         # Создаем метку для отображения количества выбранных файлов
         self.selected_files_label = QLabel(self)
 
+        self.selected_files = []
+
         # Подключаем функцию обработки нажатия на кнопку
         self.select_files_button.clicked.connect(self.select_files)
 
-    def update_positions(self):
-        label_y = int(self.parent().parent().height() * 0.3)  # 30% ниже верхней границы окна
-
-        self.select_files_button.setGeometry(20, label_y, 200, 40)
-        self.selected_files_label.setGeometry(240, label_y, 200, 40)
+        self.layout = QHBoxLayout()
+        self.layout.addWidget(self.select_files_button)
+        self.layout.addWidget(self.selected_files_label)
+        self.setLayout(self.layout)
 
     def select_files(self):
         options = QFileDialog.Options()
@@ -68,21 +70,24 @@ class FileSelectionWidget(QWidget):
         file_dialog = QFileDialog(self, options=options)
         file_dialog.setNameFilter("Text files (*.txt)")
 
-        selected_files, _ = file_dialog.getOpenFileNames()
+        self.selected_files, _ = file_dialog.getOpenFileNames()
 
-        if selected_files:
-            self.selected_files_label.setText(f"Files selected: {len(selected_files)}")
+        if self.selected_files:
+            self.selected_files_label.setText(f"Files selected: {len(self.selected_files)}")
         else:
             self.selected_files_label.setText("No files selected")
 
 
 class FileProcessingWidget(QWidget):
-    def __init__(self):
+    def __init__(self, file_selection_widget):
         super().__init__()
+
+        self.file_selection_widget = file_selection_widget
 
         # Создаем кнопку для запуска обработки файлов
         self.process_files_button = QPushButton(self)
         self.process_files_button.setText("PROCESS FILES")
+        self.process_files_button.setMaximumWidth(100)
 
         # Создаем метку для отображения результата обработки файлов
         self.result_label = QLabel(self)
@@ -95,18 +100,21 @@ class FileProcessingWidget(QWidget):
         # Подключаем функцию обработки нажатия на кнопку
         self.process_files_button.clicked.connect(self.process_files)
 
-    def update_positions(self):
-        label_y = int(self.parent().parent().height())
-        print(label_y)
-
-        self.process_files_button.setGeometry(20, round(label_y * 0.01), 200, 40)
-        self.result_label.setGeometry(200, round(label_y * 0.8), 200, 40)
-        self.error_log_label.setGeometry(420, round(label_y * 2), 200, 40)
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.process_files_button)
+        self.layout.addWidget(self.result_label)
+        self.layout.addWidget(self.error_log_label)
+        self.setLayout(self.layout)
 
     def process_files(self):
-        # Здесь вы можете добавить код для обработки выбранных файлов и вывода результатов
-        # Ваш функционал обработки информации в файлах должен быть реализован здесь
-        pass
+        selected_files = self.file_selection_widget.selected_files  # Получаем выбранные файлы из FileSelectionWidget
+        if selected_files:
+            self.result_label.setText("Result:")
+            self.error_log_label.setText("Error Log:")
+
+            print(combine_data(selected_files))
+        else:
+            self.result_label.setText("Result: No files selected")
 
 
 class MainWindow(QMainWindow):
@@ -119,28 +127,26 @@ class MainWindow(QMainWindow):
         # Устанавливаем фон для главного окна
         self.setStyleSheet("background-color: #627F7A;")
 
-        # Создаем виджеты для заголовка и выбора файлов
-        self.header_widget = HeaderWidget()
-        self.file_selection_widget = FileSelectionWidget()
-
-        # Создаем главный виджет и размещаем в нем виджеты
+        # Создаем главный виджет
         main_widget = QWidget(self)
         layout = QVBoxLayout()
-        layout.addWidget(self.header_widget)
-        layout.addWidget(self.file_selection_widget)
 
-        # Создаем и добавляем FileProcessingWidget
-        self.file_processing_widget = FileProcessingWidget()
-        layout.addWidget(self.file_processing_widget)
+        # Устанавливаем минимальный размер между виджетами (отступ)
+        layout.setSpacing(0)
 
         main_widget.setLayout(layout)
 
         # Устанавливаем главный виджет в окно
         self.setCentralWidget(main_widget)
 
-        # Вызываем update_positions для виджетов
-        self.file_selection_widget.update_positions()
-        self.file_processing_widget.update_positions()
+        # Создаем виджеты для заголовка и выбора файлов
+        self.header_widget = HeaderWidget()
+        self.file_selection_widget = FileSelectionWidget()
+        self.file_processing_widget = FileProcessingWidget(self.file_selection_widget)
+
+        layout.addWidget(self.header_widget)
+        layout.addWidget(self.file_selection_widget)
+        layout.addWidget(self.file_processing_widget)
 
 
 def start_app():
