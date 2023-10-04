@@ -5,6 +5,7 @@ from PyQt5.QtGui import QFont, QColor
 from PyQt5.QtCore import Qt
 
 import sys
+import time
 
 from utils.combine_tools import combine_data
 
@@ -112,7 +113,11 @@ class FileProcessingWidget(QWidget):
             self.result_label.setText("Result:")
             self.error_log_label.setText("Error Log:")
 
-            print(combine_data(selected_files))
+            t1 = time.time()
+            combine_data(selected_files)
+            t2 = time.time()
+            print(t2-t1)
+
         else:
             self.result_label.setText("Result: No files selected")
 
