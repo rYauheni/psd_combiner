@@ -1,27 +1,47 @@
 from parse_templates.parse_template import ParseTemplate
+from сurrency_сonverter.currencies import CURRENCIES_SYMBOLS
+
+TEMPLATES_TITLES = {
+    'buy_in': 'buy_in',
+    'currency': 'currency',
+    'total_received': 'total_received',
+    're_entry': 're_entry'
+}
 
 PARSE_TEMPLATES = (
     ParseTemplate(
-        title='buy_in',
-        detector=r'Tournament #\d+',
-        start=r'[$¥€]',
+        title=f'{TEMPLATES_TITLES["buy_in"]}',
+        detector=r'(?i)tournament #\d+',
+        start=fr'[{CURRENCIES_SYMBOLS}]',
         end=r' ',
-        required=True
+        required=True,
+        ttype=float
     ),
 
     ParseTemplate(
-        title='total_received',
-        detector=r'received a total',
-        start=r'[$¥€]',
-        end=r'\.\n',
-        required=True
+        title=f'{TEMPLATES_TITLES["currency"]}',
+        detector=fr'(?i)buy-in: [{CURRENCIES_SYMBOLS}]',
+        start=r'(?i)buy-in: ',
+        end=r'\d+',
+        required=True,
+        ttype=str
     ),
 
     ParseTemplate(
-        title='re_entry',
-        detector=r're-entries',
-        start=r'made ',
+        title=f'{TEMPLATES_TITLES["total_received"]}',
+        detector=r'(?i)received a total',
+        start=fr'[{CURRENCIES_SYMBOLS}]',
+        end=r'\.\n',  # пробел не отработан
+        required=True,
+        ttype=float
+    ),
+
+    ParseTemplate(
+        title=f'{TEMPLATES_TITLES["re_entry"]}',
+        detector=r'(?i)re-entries',
+        start=r'(?i)made ',
         end=r' ',
-        required=False
+        required=False,
+        ttype=int
     )
 )
