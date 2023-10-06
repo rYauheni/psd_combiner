@@ -15,11 +15,18 @@ pp = pprint.PrettyPrinter(indent=4)
 def combine_data(selected_files):
     tournament_checklist = []  # реализовать функционал удаления дубликатов
     metrics = create_metrics()
+    errors = []
 
     for file_path in selected_files:
         result = parse_file(file_path)
         # pp.pprint(result)
         if not result['errors']:
+            if result['content'] in tournament_checklist:
+                metrics['doubles'] += 1
+                continue
+
+            tournament_checklist.append(result['content'])
+
             metrics['tournaments_n'] += 1  # проверка на дубли должна быть
             metrics['re_entries_n'] += result['data'][f'{TEMPLATES_TITLES["re_entry"]}']['value']
 
@@ -45,6 +52,14 @@ def combine_data(selected_files):
             convert_total_received = total_received
             metrics[f'{TEMPLATES_TITLES["total_received"]}']['convert'] += convert_total_received
 
+        else:
+            error_dict = {
+                'file': result['file'],
+                'content': result['content'],
+                'errors': result['errors']
+            }
+            errors.append(error_dict)
+
     metrics['total_entries_n'] = metrics['tournaments_n'] + metrics['re_entries_n']
     metrics['profit'] = metrics[f'{TEMPLATES_TITLES["total_received"]}']['convert'] - \
                     metrics[f'{TEMPLATES_TITLES["buy_in"]}']['total']['convert']
@@ -65,6 +80,7 @@ def create_metrics() -> dict:
         'tournaments_n': 0,
         're_entries_n': 0,
         'total_entries_n': 0,
+        'doubles': 0,
 
         f'{TEMPLATES_TITLES["buy_in"]}': copy.deepcopy(finance_metric_dict),
 
