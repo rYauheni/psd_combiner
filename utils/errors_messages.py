@@ -1,11 +1,20 @@
 def get_error_message(template, error='error'):
     if error == 'notfound':
-        return f'Template {template} not found in file'
+        return f'ERROR: Template {template} not found in file'
     elif error == 'unknown':
-        return f'Template {template} not parsed in line'
+        return f'ERROR: Template {template} not parsed in line'
     elif error == 'unlimited':
-        return f'Limits (start or(and) end) of template {template} not parsed in line'
+        return f'ERROR: Limits (start or(and) end) of template {template} not parsed in line'
     elif error == 'multiple':
-        return f'Template {template} more than once in file'
+        return f'ERROR: Template {template} more than once in file'
     else:
-        return f'Template {template} - unknown error - {error}'
+        return f'ERROR: Template {template} - unknown error - {error}'
+
+
+def get_general_error_message(error='error'):
+    if error == 'static':
+        return 'WARNING: Static exchange rate applied'
+    elif error == 'notcurrency':
+        return 'ERROR: exchange rate is not determined'
+
+

@@ -1,5 +1,5 @@
 from parse_templates.parse_template import ParseTemplate
-from сurrency_сonverter.currencies import CURRENCIES_SYMBOLS
+from сurrency_сonvertion.currencies import CURRENCIES_SYMBOLS
 
 TEMPLATES_TITLES = {
     'buy_in': 'buy_in',
@@ -31,7 +31,7 @@ PARSE_TEMPLATES = (
         title=f'{TEMPLATES_TITLES["total_received"]}',
         detector=r'(?i)received a total',
         start=fr'[{CURRENCIES_SYMBOLS}]',
-        end=r'\.\n',  # пробел не отработан
+        end=r'\.$|\s',  # пробел не отработан
         required=True,
         ttype=float
     ),

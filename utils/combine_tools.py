@@ -3,9 +3,10 @@ import re
 import copy
 
 from parse_templates.parse_templates_list import TEMPLATES_TITLES, PARSE_TEMPLATES
-from utils.errors_messages import get_error_message
+from utils.errors_messages import get_error_message, get_general_error_message
 
-from сurrency_сonverter.currencies import CURRENCIES_SYMBOLS_CODES_DICT
+from сurrency_сonvertion.currencies import CURRENCIES_SYMBOLS_CODES_DICT
+from сurrency_сonvertion.сonverter import set_rates, convert, EXCHANGE_RATE, EXCHANGE_RATE_STATIC
 
 # del
 import pprint
@@ -15,7 +16,16 @@ pp = pprint.PrettyPrinter(indent=4)
 def combine_data(selected_files):
     tournament_checklist = []  # реализовать функционал удаления дубликатов
     metrics = create_metrics()
-    errors = []
+    errors = {
+        'general_errors': [],
+        'file_errors': []
+    }
+
+    set_exchange_rates = set_rates()
+    if not set_exchange_rates:
+        get_general_error_message(error='notcurrency')
+    elif set_exchange_rates == 2:
+        get_general_error_message(error='static')
 
     for file_path in selected_files:
         result = parse_file(file_path)
@@ -34,23 +44,31 @@ def combine_data(selected_files):
             currency_code = CURRENCIES_SYMBOLS_CODES_DICT[currency_symbol]
 
             # BUI_IN
-            buy_in = result['data'][f'{TEMPLATES_TITLES["buy_in"]}']['value']
+            buy_in = round(result['data'][f'{TEMPLATES_TITLES["buy_in"]}']['value'], 2)
             re_entry = result['data'][f'{TEMPLATES_TITLES["re_entry"]}']['value']
             metrics[f'{TEMPLATES_TITLES["buy_in"]}']['first_entries'][currency_code] += buy_in
             metrics[f'{TEMPLATES_TITLES["buy_in"]}']['re_entries'][currency_code] += buy_in * re_entry
             metrics[f'{TEMPLATES_TITLES["buy_in"]}']['total'][currency_code] += buy_in + buy_in * re_entry
             # ЗДЕСЬ НУЖНО ДОПОЛНИТЬ КОНВЕРТАЦИЕЙ ВАЛЮТ
-            convert_buy_in = buy_in
-            metrics[f'{TEMPLATES_TITLES["buy_in"]}']['first_entries']['convert'] += convert_buy_in
-            metrics[f'{TEMPLATES_TITLES["buy_in"]}']['re_entries']['convert'] += convert_buy_in * re_entry
-            metrics[f'{TEMPLATES_TITLES["buy_in"]}']['total']['convert'] += convert_buy_in + convert_buy_in * re_entry
+            if currency_code == 'USD':
+                convert_buy_in = buy_in
+            else:
+                convert_buy_in = round(convert(currency=currency_code, amount=buy_in), 2)
+            if set_exchange_rates:
+                metrics[f'{TEMPLATES_TITLES["buy_in"]}']['first_entries']['convert'] += convert_buy_in
+                metrics[f'{TEMPLATES_TITLES["buy_in"]}']['re_entries']['convert'] += convert_buy_in * re_entry
+                metrics[f'{TEMPLATES_TITLES["buy_in"]}']['total']['convert'] += convert_buy_in + convert_buy_in * re_entry
 
             # TOTAL_RECEIVED
-            total_received = result['data'][f'{TEMPLATES_TITLES["total_received"]}']['value']
+            total_received = round(result['data'][f'{TEMPLATES_TITLES["total_received"]}']['value'], 2)
             metrics[f'{TEMPLATES_TITLES["total_received"]}'][currency_code] += total_received
             # ЗДЕСЬ НУЖНО ДОПОЛНИТЬ КОНВЕРТАЦИЕЙ ВАЛЮТ
-            convert_total_received = total_received
-            metrics[f'{TEMPLATES_TITLES["total_received"]}']['convert'] += convert_total_received
+            if currency_code == 'USD':
+                convert_total_received = total_received
+            else:
+                convert_total_received = round(convert(currency=currency_code, amount=total_received), 2)
+            if set_exchange_rates:
+                metrics[f'{TEMPLATES_TITLES["total_received"]}']['convert'] += convert_total_received
 
         else:
             error_dict = {
@@ -58,13 +76,15 @@ def combine_data(selected_files):
                 'content': result['content'],
                 'errors': result['errors']
             }
-            errors.append(error_dict)
+            errors['file_errors'].append(error_dict)
 
     metrics['total_entries_n'] = metrics['tournaments_n'] + metrics['re_entries_n']
     metrics['profit'] = metrics[f'{TEMPLATES_TITLES["total_received"]}']['convert'] - \
                     metrics[f'{TEMPLATES_TITLES["buy_in"]}']['total']['convert']
 
     pp.pprint(metrics)
+
+    pp.pprint(errors)
 
 
 def create_metrics() -> dict:
@@ -146,6 +166,7 @@ def parse_line(line, result):
                 result['errors'].append(get_error_message(template.title, 'unlimited'))
                 continue
             extract_line = extract_line[:end.span()[0]]
+            extract_line = re.sub(',', '', extract_line)
             try:
                 type_func = result['data'][tt]['template'].ttype
                 value = type_func(extract_line)
