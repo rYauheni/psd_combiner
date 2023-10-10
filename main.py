@@ -1,13 +1,15 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QFileDialog, QWidget, QVBoxLayout, \
-    QHBoxLayout
-from PyQt5.QtGui import QFont, QColor
+    QHBoxLayout, QScrollArea, QSizePolicy, QTextBrowser
+from PyQt5.QtGui import QFont, QColor, QMovie
 from PyQt5.QtCore import Qt
 
 import sys
 import time
 
 from utils.combine_tools import combine_data
+
+from static.style_sheet import style_sheets
 
 
 class HeaderWidget(QWidget):
@@ -90,36 +92,107 @@ class FileProcessingWidget(QWidget):
         self.process_files_button.setText("PROCESS FILES")
         self.process_files_button.setMaximumWidth(100)
 
-        # Создаем метку для отображения результата обработки файлов
-        self.result_label = QLabel(self)
-        self.result_label.setText("Result:")
-
-        # Создаем метку для отображения ошибок при обработке файлов
-        self.error_log_label = QLabel(self)
-        self.error_log_label.setText("Error Log:")
-
         # Подключаем функцию обработки нажатия на кнопку
         self.process_files_button.clicked.connect(self.process_files)
 
+        # Создаем QLabel для анимации и скрываем его
+        self.animation_label = QLabel(self)
+        self.movie = QMovie('static/gif/processing.gif')  # Укажите путь к вашей анимации
+        self.animation_label.setMovie(self.movie)
+        self.animation_label.hide()
+
+        # Создаем метку для отображения результата обработки файлов
+        self.result_text = QTextBrowser(self)
+        self.result_text.setPlainText("Result:")
+        self.result_text.setStyleSheet(style_sheets.RESULT_SS)
+        self.result_text.setFixedHeight(200)
+
+        # Создаем кнопку "Copy" для копирования результата
+        self.copy_button = QPushButton(self)
+        self.copy_button.setText("Copy")
+        self.copy_button.setMaximumWidth(100)
+        self.copy_button.clicked.connect(self.copy_result_to_clipboard)
+
+        # Создаем метку для отображения ошибок при обработке файлов
+        self.error_log_text = QTextBrowser(self)
+        self.error_log_text.setPlainText("Error Log:")
+        self.error_log_text.setStyleSheet(style_sheets.ERRORS_LOG_SS)
+
+        # Создаем область с прокруткой для error_log_label
+        self.error_log_scroll_area = QScrollArea(self)
+        self.error_log_scroll_area.setWidgetResizable(True)
+        self.error_log_scroll_area.setMaximumHeight(160)
+        self.error_log_scroll_area.setWidget(self.error_log_text)
+
+
+        # Создаем кнопку "Copy2" для копирования errors
+        self.copy_2_button = QPushButton(self)
+        self.copy_2_button.setText("Copy2")
+        self.copy_2_button.setMaximumWidth(100)
+        self.copy_2_button.clicked.connect(self.copy_errors_to_clipboard)
+
+
+        # Создаем горизонтальный макет для result_label и copy_button
+        result_layout = QHBoxLayout()
+        result_layout.addWidget(self.result_text)
+        result_layout.addWidget(self.copy_button)
+
+        # Создаем горизонтальный макет для errors
+        errors_layout = QHBoxLayout()
+        errors_layout.addWidget(self.error_log_scroll_area)
+        errors_layout.addWidget(self.copy_2_button)
+
+        # Основной вертикальный макет
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.process_files_button)
-        self.layout.addWidget(self.result_label)
-        self.layout.addWidget(self.error_log_label)
+        self.layout.addWidget(self.animation_label)
+        self.layout.addLayout(result_layout)
+        self.layout.addLayout(errors_layout)
+
         self.setLayout(self.layout)
 
     def process_files(self):
         selected_files = self.file_selection_widget.selected_files  # Получаем выбранные файлы из FileSelectionWidget
+
+        # Показываем анимацию перед началом обработки
+        self.animation_label.show()
+        self.movie.start()
+
         if selected_files:
-            self.result_label.setText("Result:")
-            self.error_log_label.setText("Error Log:")
+            self.result_text.setText("Result:")
+            self.error_log_text.setText("Error Log:")
+            self.result_text.setPlainText("Tournaments: ___\n"
+                                          "Total entries: ___ (re-entries: ___)\n"
+                                          "Buy-in (total): USD ___ (USD: ___, EUR ___, CNY ___)\n"
+                                          "Buy-in (first entries): USD ___ (USD: ___, EUR ___, CNY ___)\n"
+                                          "Buy-in (reentries): USD ___ (USD: ___, EUR ___, CNY ___)\n"
+                                          "Total received: USD ___ (USD: ___, EUR ___, CNY ___)\n"
+                                          "Profit: ___")
 
             t1 = time.time()
             combine_data(selected_files)
             t2 = time.time()
             print(t2-t1)
 
+
         else:
-            self.result_label.setText("Result: No files selected")
+            self.result_text.setText("No files selected")
+
+        # По завершению обработки скрываем анимацию
+        # self.movie.stop()
+        # self.animation_label.hide()
+
+
+
+    def copy_result_to_clipboard(self):
+        text = self.result_text.toPlainText()
+        clipboard = QApplication.clipboard()
+        clipboard.setText(text)
+
+    def copy_errors_to_clipboard(self):
+        text = self.error_log_text.toPlainText()
+        clipboard = QApplication.clipboard()
+        clipboard.setText(text)
 
 
 class MainWindow(QMainWindow):
