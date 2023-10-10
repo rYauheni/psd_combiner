@@ -31,7 +31,7 @@ PARSE_TEMPLATES = (
         title=f'{TEMPLATES_TITLES["total_received"]}',
         detector=r'(?i)received a total',
         start=fr'[{CURRENCIES_SYMBOLS}]',
-        end=r'\.$|\s',  # пробел не отработан
+        end=r'\.$|\s',
         required=True,
         ttype=float
     ),
