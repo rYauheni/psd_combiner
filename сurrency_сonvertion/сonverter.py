@@ -10,6 +10,12 @@ BASE_URL = r'https://www.google.com/finance/quote/'
 EXCHANGE_RATE = {}
 EXCHANGE_RATE_STATIC = {}
 
+EXCHANGED_RATE_FIXED = {
+    'USD': 1.0,
+    'EUR': 1.05,
+    'CNY': 0.15
+}
+
 currencies = tuple(c for c in CURRENCIES_SYMBOLS_CODES_DICT.values() if c != 'USD')
 
 
@@ -56,7 +62,7 @@ def convert(currency, amount):
         try:
             rate = float(EXCHANGE_RATE_STATIC[currency])
         except Exception:
-            return None
+            rate = float(EXCHANGED_RATE_FIXED[currency])
     return rate * amount
 
 

@@ -14,7 +14,7 @@ def get_error_message(template, error='error'):
 def get_general_error_message(error='error'):
     if error == 'static':
         return 'WARNING: Static exchange rate applied'
-    elif error == 'notcurrency':
-        return 'ERROR: exchange rate is not determined'
+    elif error == 'fixed':
+        return 'WARNING: FIXED exchange rate applied'
 
 
