@@ -15,7 +15,7 @@ pp = pprint.PrettyPrinter(indent=4)
 
 
 def combine_data(selected_files):
-    tournament_checklist = []  # реализовать функционал удаления дубликатов
+    tournament_checklist = []
     metrics = create_metrics()
     errors = {
         'general_errors': [],
