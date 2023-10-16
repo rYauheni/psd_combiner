@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 
 from currency_converter import CurrencyConverter
 
-from сurrency_сonvertion.currencies import CURRENCIES_SYMBOLS_CODES_DICT
+from c_converter.currencies import CURRENCIES_SYMBOLS_CODES_DICT
 
 BASE_URL = r'https://www.google.com/finance/quote/'
 

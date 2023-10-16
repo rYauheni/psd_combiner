@@ -6,8 +6,8 @@ from parse_templates.parse_templates_list import TEMPLATES_TITLES, PARSE_TEMPLAT
 from utils.errors_messages import get_error_message, get_general_error_message
 from utils.rounding_func import round_dec
 
-from сurrency_сonvertion.currencies import CURRENCIES_SYMBOLS_CODES_DICT, CURRENCIES_SYMBOLS
-from сurrency_сonvertion.сonverter import set_rates, convert, EXCHANGE_RATE, EXCHANGE_RATE_STATIC
+from c_converter.currencies import CURRENCIES_SYMBOLS_CODES_DICT, CURRENCIES_SYMBOLS
+from c_converter.сonverter import set_rates, convert
 
 # del
 import pprint

@@ -1,5 +1,5 @@
 from parse_templates.parse_template import ParseTemplate
-from сurrency_сonvertion.currencies import CURRENCIES_SYMBOLS
+from c_converter.currencies import CURRENCIES_SYMBOLS
 
 TEMPLATES_TITLES = {
     'buy_in': 'buy_in',
