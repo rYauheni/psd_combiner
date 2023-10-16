@@ -157,7 +157,7 @@ def parse_file(file_path):
                             if line == '\n':
                                 continue
                             alt_result['content'] += line
-                            alt_result = parse_line_stage(line=line, alt_result=alt_result)
+                            alt_result = parse_line_alt(line=line, alt_result=alt_result)
 
                     check_errors(result=alt_result)
                     if not alt_result['errors']:
@@ -208,7 +208,7 @@ def parse_line(line, templates, result):
     return result
 
 
-def parse_line_stage(line, alt_result):
+def parse_line_alt(line, alt_result):
     symbols = CURRENCIES_SYMBOLS
     line = line.lower()
 
@@ -233,9 +233,10 @@ def parse_line_stage(line, alt_result):
                     alt_result['data']['currency']['quantity'] += 1
 
                     try:
-                        find_prize = line.count(currency)
+                        currency_escaped = re.escape(currency)
+                        find_prize = line.count(currency_escaped)
                         if find_prize == 2:
-                            elements = re.findall(fr'{currency}(\d+)', line)
+                            elements = re.findall(fr'{currency_escaped}(\d+)', line)
                             prize = float(elements[1].replace(',', ''))
                             alt_result['data']['total_received']['value'] += prize
                             alt_result['data']['total_received']['quantity'] += 1
@@ -252,7 +253,7 @@ def parse_line_stage(line, alt_result):
         try:
             for symbol in symbols:
                 if symbol in line:
-                    currency = symbol
+                    currency = re.escape(symbol)
                     elements = re.search(fr'{currency}([\d,]+(?:\.\d+)?)', line)
                     if elements:
                         prize = float(elements.group(1).replace(',', ''))
