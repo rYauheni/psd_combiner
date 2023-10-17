@@ -135,6 +135,7 @@ def parse_file(file_path):
                 # processing files that do not correspond to standard PARSE_TEMPLATES
                 if result['errors']:
                     alt_result = create_result()
+                    lines = [line.replace('C$', '$') for line in lines]
 
                     if 'freeroll' in lines[0].lower():
                         pt_list = list(PARSE_TEMPLATES)
@@ -215,9 +216,19 @@ def parse_line_alt(line, alt_result):
     # buy-in template
     if 'buy-in' in line:
         try:
+            for symbol in symbols:
+                if symbol in line:
+                    currency = symbol
+                    alt_result['data']['currency']['value'] = currency
+                    alt_result['data']['currency']['quantity'] += 1
+
             elements = re.findall(r'\d+\.\d+|\d+', line)
             elements = [elem.replace(',', '') for elem in elements]
-            buy_in = sum(float(elem) for elem in elements) + 4.5
+            if '¥' in line:
+                add = 4.5
+            else:
+                add = 0
+            buy_in = sum(float(elem) for elem in elements) + add
             alt_result['data']['buy_in']['value'] += buy_in
             alt_result['data']['buy_in']['quantity'] += 1
         except Exception as e:
@@ -229,8 +240,8 @@ def parse_line_alt(line, alt_result):
             for symbol in symbols:
                 if symbol in line:
                     currency = symbol
-                    alt_result['data']['currency']['value'] = currency
-                    alt_result['data']['currency']['quantity'] += 1
+                    # alt_result['data']['currency']['value'] = currency
+                    # alt_result['data']['currency']['quantity'] += 1
 
                     try:
                         currency_escaped = re.escape(currency)
@@ -251,17 +262,22 @@ def parse_line_alt(line, alt_result):
     # total received template
     elif 'received a total' in line:
         try:
-            for symbol in symbols:
-                if symbol in line:
-                    currency = re.escape(symbol)
-                    elements = re.search(fr'{currency}([\d,]+(?:\.\d+)?)', line)
-                    if elements:
-                        prize = float(elements.group(1).replace(',', ''))
-                        alt_result['data']['total_received']['value'] += prize
-                        if not alt_result['data']['total_received']['quantity']:
-                            alt_result['data']['total_received']['quantity'] += 1
+            if 'chips' in line:
+                alt_result['data']['total_received']['value'] += 0
+                if not alt_result['data']['total_received']['quantity']:
+                    alt_result['data']['total_received']['quantity'] += 1
+            else:
+                for symbol in symbols:
+                    if symbol in line:
+                        currency = re.escape(symbol)
+                        elements = re.search(fr'{currency}([\d,]+(?:\.\d+)?)', line)
+                        if elements:
+                            prize = float(elements.group(1).replace(',', ''))
+                            alt_result['data']['total_received']['value'] += prize
+                            if not alt_result['data']['total_received']['quantity']:
+                                alt_result['data']['total_received']['quantity'] += 1
 
-                    break
+                        break
         except Exception as e:
             alt_result['errors'].append(get_error_message('currency', str(e)))
 
