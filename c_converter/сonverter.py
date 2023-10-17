@@ -56,6 +56,16 @@ def set_rates():
     return 1
 
 
+def get_rates():
+    if not EXCHANGE_RATE and not EXCHANGE_RATE_STATIC:
+        set_rates()
+    if EXCHANGE_RATE:
+        return EXCHANGE_RATE
+    if EXCHANGE_RATE_STATIC:
+        return EXCHANGE_RATE_STATIC
+    return EXCHANGED_RATE_FIXED
+
+
 def convert(currency, amount):
     try:
         rate = float(EXCHANGE_RATE[currency])
@@ -65,9 +75,3 @@ def convert(currency, amount):
         except Exception:
             rate = float(EXCHANGED_RATE_FIXED[currency])
     return rate * amount
-
-
-# set_exchange_rates()
-# set_exchange_rates_static()
-# print('er ', EXCHANGE_RATE)
-# print('ers ', EXCHANGE_RATE_STATIC)
