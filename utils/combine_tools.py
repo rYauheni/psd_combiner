@@ -7,7 +7,7 @@ from utils.errors_messages import get_error_message, get_general_error_message
 from utils.rounding_func import round_dec
 
 from c_converter.currencies import CURRENCIES_SYMBOLS_CODES_DICT, CURRENCIES_SYMBOLS
-from c_converter.сonverter import set_rates, convert
+from c_converter.сonverter import set_rates, get_rates, convert
 
 # del
 import pprint
@@ -20,6 +20,7 @@ def combine_data(selected_files):
     metrics = create_metrics()
     errors = {
         'general_errors': [],
+        'duplicates': 0,
         'file_errors': []
     }
 
@@ -29,49 +30,52 @@ def combine_data(selected_files):
     elif set_exchange_rates == 2:
         errors['general_errors'].append(get_general_error_message(error='static'))
 
+    metrics['exchange_rate'] = metrics['exchange_rate'] | get_rates()
+
     for file_path in selected_files:
         result = parse_file(file_path)
+        if not result:
+            continue
+
         # pp.pprint(result)
         if not result['errors']:
             if result['content'] in tournament_checklist:
-                metrics['doubles'] += 1
+                errors['duplicates'] += 1
                 continue
 
             tournament_checklist.append(result['content'])
 
-            metrics['tournaments_n'] += 1  # проверка на дубли должна быть
+            metrics['tournaments_n'] += 1
             metrics['re_entries_n'] += result['data'][f'{TEMPLATES_TITLES["re_entry"]}']['value']
 
             currency_symbol = result['data'][f'{TEMPLATES_TITLES["currency"]}']['value']
             currency_code = CURRENCIES_SYMBOLS_CODES_DICT[currency_symbol]
 
-            # BUI_IN
-            buy_in = round_dec(result['data'][f'{TEMPLATES_TITLES["buy_in"]}']['value'])
+            # BUY_IN
+            buy_in = result['data'][f'{TEMPLATES_TITLES["buy_in"]}']['value']
             re_entry = result['data'][f'{TEMPLATES_TITLES["re_entry"]}']['value']
             metrics[f'{TEMPLATES_TITLES["buy_in"]}']['first_entries'][currency_code] += buy_in
             metrics[f'{TEMPLATES_TITLES["buy_in"]}']['re_entries'][currency_code] += buy_in * re_entry
             metrics[f'{TEMPLATES_TITLES["buy_in"]}']['total'][currency_code] += buy_in + buy_in * re_entry
-            # ЗДЕСЬ НУЖНО ДОПОЛНИТЬ КОНВЕРТАЦИЕЙ ВАЛЮТ
+            # CURRENCY CONVERTING FOR BUY_IN
             if currency_code == 'USD':
                 convert_buy_in = buy_in
             else:
-                convert_buy_in = round_dec(convert(currency=currency_code, amount=buy_in))
-            if set_exchange_rates:
-                metrics[f'{TEMPLATES_TITLES["buy_in"]}']['first_entries']['convert'] += convert_buy_in
-                metrics[f'{TEMPLATES_TITLES["buy_in"]}']['re_entries']['convert'] += convert_buy_in * re_entry
-                metrics[f'{TEMPLATES_TITLES["buy_in"]}']['total'][
-                    'convert'] += convert_buy_in + convert_buy_in * re_entry
+                convert_buy_in = convert(currency=currency_code, amount=buy_in)
+            metrics[f'{TEMPLATES_TITLES["buy_in"]}']['first_entries']['convert'] += convert_buy_in
+            metrics[f'{TEMPLATES_TITLES["buy_in"]}']['re_entries']['convert'] += convert_buy_in * re_entry
+            metrics[f'{TEMPLATES_TITLES["buy_in"]}']['total'][
+                'convert'] += convert_buy_in + convert_buy_in * re_entry
 
             # TOTAL_RECEIVED
-            total_received = round_dec(result['data'][f'{TEMPLATES_TITLES["total_received"]}']['value'])
+            total_received = result['data'][f'{TEMPLATES_TITLES["total_received"]}']['value']
             metrics[f'{TEMPLATES_TITLES["total_received"]}'][currency_code] += total_received
-            # ЗДЕСЬ НУЖНО ДОПОЛНИТЬ КОНВЕРТАЦИЕЙ ВАЛЮТ
+            # CURRENCY CONVERTING FOR TOTAL RECEIVED
             if currency_code == 'USD':
                 convert_total_received = total_received
             else:
-                convert_total_received = round_dec(convert(currency=currency_code, amount=total_received))
-            if set_exchange_rates:
-                metrics[f'{TEMPLATES_TITLES["total_received"]}']['convert'] += convert_total_received
+                convert_total_received = convert(currency=currency_code, amount=total_received)
+            metrics[f'{TEMPLATES_TITLES["total_received"]}']['convert'] += convert_total_received
 
         else:
             error_dict = {
@@ -85,9 +89,13 @@ def combine_data(selected_files):
     metrics['profit'] = metrics[f'{TEMPLATES_TITLES["total_received"]}']['convert'] - \
                         metrics[f'{TEMPLATES_TITLES["buy_in"]}']['total']['convert']
 
-    pp.pprint(metrics)
+    metrics = rounding_metrics_values(metrics)
 
-    pp.pprint(errors)
+    # pp.pprint(metrics)
+    #
+    # pp.pprint(errors)
+
+    return metrics, errors
 
 
 def create_metrics() -> dict:
@@ -103,14 +111,34 @@ def create_metrics() -> dict:
         'tournaments_n': 0,
         're_entries_n': 0,
         'total_entries_n': 0,
-        'doubles': 0,
 
         f'{TEMPLATES_TITLES["buy_in"]}': copy.deepcopy(finance_metric_dict),
 
         f'{TEMPLATES_TITLES["total_received"]}': copy.deepcopy(currency_metric_dict),
 
-        'profit': 0
+        'profit': 0,
+
+        'exchange_rate': {'USD': 1.0}
     }
+
+    return metrics
+
+
+def rounding_metrics_values(metrics) -> dict:
+    # BUY_IN
+    for top_key, stat in metrics[f'{TEMPLATES_TITLES["buy_in"]}'].items():
+        for bot_key, value in stat.items():
+            rnd_value = round_dec(value)
+            metrics[f'{TEMPLATES_TITLES["buy_in"]}'][top_key][bot_key] = rnd_value
+
+    # TOTAL RECEIVED
+    for key, value in metrics[f'{TEMPLATES_TITLES["total_received"]}'].items():
+        rnd_value = round_dec(value)
+        metrics[f'{TEMPLATES_TITLES["total_received"]}'][key] = rnd_value
+
+    # PROFIT
+    rnd_value = round_dec(metrics['profit'])
+    metrics['profit'] = rnd_value
 
     return metrics
 
@@ -240,8 +268,6 @@ def parse_line_alt(line, alt_result):
             for symbol in symbols:
                 if symbol in line:
                     currency = symbol
-                    # alt_result['data']['currency']['value'] = currency
-                    # alt_result['data']['currency']['quantity'] += 1
 
                     try:
                         currency_escaped = re.escape(currency)

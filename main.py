@@ -11,6 +11,8 @@ from utils.combine_tools import combine_data
 
 from static.style_sheet import style_sheets
 
+from parse_templates.parse_templates_list import TEMPLATES_TITLES
+
 
 class WorkerThread(QThread):
     result_ready = pyqtSignal(object)
@@ -204,19 +206,63 @@ class FileProcessingWidget(QWidget):
 
         else:
             self.result_text.setText("No files selected")
+            self.error_log_text.setText("No files selected")
 
     def handle_worker_thread_result(self, result):
-        # Here we process the result of executing combine_data and hide the animation
+        # Processing the result of executing combine_data and hide the animation
         self.movie.stop()
         self.animation_label.hide()
-        self.result_text.setPlainText("Tournaments: ___\n"
-                                      "Total entries: ___ (re-entries: ___)\n"
-                                      "Buy-in (total): USD ___ (USD: ___, EUR ___, CNY ___)\n"
-                                      "Buy-in (first entries): USD ___ (USD: ___, EUR ___, CNY ___)\n"
-                                      "Buy-in (reentries): USD ___ (USD: ___, EUR ___, CNY ___)\n"
-                                      "Total received: USD ___ (USD: ___, EUR ___, CNY ___)\n"
-                                      "Profit: ___")
-        print(result)
+
+        metrics = result[0]
+        errors = result[1]
+
+        bi = metrics[f'{TEMPLATES_TITLES["buy_in"]}']
+        tr = metrics[f'{TEMPLATES_TITLES["total_received"]}']
+        er = metrics['exchange_rate']
+
+        self.result_text.setPlainText(f"Tournaments: {metrics['tournaments_n']}\n"
+                                      f"Total entries: {metrics['total_entries_n']} "
+                                      f"(re-entries: {metrics['re_entries_n']})\n"
+                                      f"Buy-in (total): USD {bi['total']['convert']} (USD: {bi['total']['USD']}, "
+                                      f"EUR {bi['total']['EUR']}, CNY {bi['total']['CNY']})\n"
+                                      f"Buy-in (first entries): USD {bi['first_entries']['convert']} "
+                                      f"(USD: {bi['first_entries']['USD']}, EUR {bi['first_entries']['EUR']}, "
+                                      f"CNY {bi['first_entries']['CNY']})\n"
+                                      f"Buy-in (re-entries): USD {bi['re_entries']['convert']} "
+                                      f"(USD: {bi['re_entries']['USD']}, EUR {bi['re_entries']['EUR']}, "
+                                      f"CNY {bi['re_entries']['CNY']})\n"
+                                      f"Total received: USD {tr['convert']} (USD: {tr['USD']}, EUR {tr['EUR']}, "
+                                      f"CNY {tr['CNY']})\n"
+                                      f"Profit: {metrics['profit']}\n"
+                                      f"Exchanges rate: 1 EUR = {er['EUR']} USD; 1 CNY = {er['CNY']} USD")
+
+        errors_check = sum([0] + [1 for value in errors.values() if value])
+
+        if errors_check:
+            errors_log_message = ''
+
+            ge = errors['general_errors']
+            if ge:
+                ers = '\n'.join(e for e in ge)
+                errors_log_message += f"General errors:\n{ers}\n"
+
+            d = errors['duplicates']
+            if d:
+                errors_log_message += f"Duplicates detected: {d}\n"
+
+            fe = errors['file_errors']
+            if fe:
+                errors_log_message += "File errors:\n"
+                for e in fe:
+                    ers = '\n'.join(er for er in e['errors'])
+                    errors_log_message += f"File: {e['file']}\n" \
+                                          f"Content:\n{e['content']}\n" \
+                                          f"Errors:\n{ers}\n"
+
+            self.error_log_text.setPlainText(errors_log_message)
+
+        else:
+            self.error_log_text.setPlainText("No errors found")
 
     def copy_result_to_clipboard(self):
         text = self.result_text.toPlainText()
