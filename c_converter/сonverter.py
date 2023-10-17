@@ -6,6 +6,7 @@ from currency_converter import CurrencyConverter
 from c_converter.currencies import CURRENCIES_SYMBOLS_CODES_DICT
 
 BASE_URL = r'https://www.google.com/finance/quote/'
+HTML_CLASS_NAME = 'YMlKec fxKbKc'
 
 EXCHANGE_RATE = {}
 EXCHANGE_RATE_STATIC = {}
@@ -28,7 +29,7 @@ def set_exchange_rates():
         main_text = source.text
         soup = BeautifulSoup(main_text)
 
-        tag = soup.find('div', {'class': 'YMlKec fxKbKc'})
+        tag = soup.find('div', {'class': f'{HTML_CLASS_NAME}'})
         rate = tag.text
 
         EXCHANGE_RATE[currency] = rate
