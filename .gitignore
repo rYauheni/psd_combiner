@@ -1,0 +1,6 @@
+/venv/
+.idea
+/db.sqlite3
+/media/
+/.env
+/tests/instances/common_instances/
