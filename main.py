@@ -1,6 +1,6 @@
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QFileDialog, QWidget, QVBoxLayout, \
-    QHBoxLayout, QScrollArea, QSizePolicy, QTextBrowser, QSpacerItem
+    QHBoxLayout, QScrollArea, QSizePolicy, QTextBrowser, QSpacerItem, QScrollBar
 from PyQt5.QtGui import QFont, QColor, QMovie, QPixmap, QIcon
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 
@@ -53,18 +53,6 @@ class HeaderWidget(QWidget):
         self.layout.addWidget(self.header_main)
         self.setLayout(self.layout)
 
-    # def resizeEvent(self, event):
-    #     # Вызываем метод при изменении размера виджета
-    #     self.update_positions()
-    #     super().resizeEvent(event)
-    #
-    # def update_positions(self):
-    #     label_width = self.width()  # Ширина текста равна ширине виджета
-    #     label_height = 40  # Высота текста
-    #     label_x = 0  # X-координата текста начинается с нуля
-    #     label_y = 0  # Округляем до целого числа
-    #     self.header_main.setGeometry(label_x, label_y, label_width, label_height)
-
 
 class FileSelectionWidget(QWidget):
     def __init__(self):
@@ -74,7 +62,7 @@ class FileSelectionWidget(QWidget):
         self.select_files_button = QPushButton(self)
         self.select_files_button.setText("Select")
         self.select_files_button.setMaximumWidth(100)
-        self.select_files_button.setStyleSheet(style_sheets.BUTTON_SS)
+        self.select_files_button.setStyleSheet(style_sheets.BUTTON_EXEC_SS)
 
         # Create a label to display the number of selected files
         self.selected_files_label = QLabel(self)
@@ -115,7 +103,7 @@ class FileProcessingWidget(QWidget):
         self.process_files_button = QPushButton(self)
         self.process_files_button.setText("Process")
         self.process_files_button.setMaximumWidth(100)
-        self.process_files_button.setStyleSheet(style_sheets.BUTTON_SS)
+        self.process_files_button.setStyleSheet(style_sheets.BUTTON_EXEC_SS)
 
         # Connecting the processing button click processing function
         self.process_files_button.clicked.connect(self.process_files)
@@ -130,32 +118,27 @@ class FileProcessingWidget(QWidget):
         self.result_text = QTextBrowser(self)
         self.result_text.setPlainText("Result:")
         self.result_text.setStyleSheet(style_sheets.RESULT_SS)
-        self.result_text.setFixedHeight(200)
+        self.result_text.setFixedHeight(170)
 
         # Create a copy button to copy the result
         self.copy_button = QPushButton(self)
         self.copy_button.setText("Copy")
         self.copy_button.setMaximumWidth(100)
         self.copy_button.clicked.connect(self.copy_result_to_clipboard)
-        self.copy_button.setStyleSheet(style_sheets.BUTTON_SS)
+        self.copy_button.setStyleSheet(style_sheets.BUTTON_COPY_SS)
 
         # Create a text area to display errors when processing files
         self.error_log_text = QTextBrowser(self)
         self.error_log_text.setPlainText("Error Log:")
-        self.error_log_text.setStyleSheet(style_sheets.ERRORS_LOG_SS)
-
-        # Create a scroll area for error_log_label
-        self.error_log_scroll_area = QScrollArea(self)
-        self.error_log_scroll_area.setWidgetResizable(True)
-        self.error_log_scroll_area.setMaximumHeight(160)
-        self.error_log_scroll_area.setWidget(self.error_log_text)
+        self.error_log_text.setStyleSheet(style_sheets.ERRORS_LOG_BASE_SS)
+        self.error_log_text.setFixedHeight(100)
 
         # Create a copy button to copy the error_log
         self.copy_2_button = QPushButton(self)
         self.copy_2_button.setText("Copy")
         self.copy_2_button.setMaximumWidth(100)
         self.copy_2_button.clicked.connect(self.copy_errors_to_clipboard)
-        self.copy_2_button.setStyleSheet(style_sheets.BUTTON_SS)
+        self.copy_2_button.setStyleSheet(style_sheets.BUTTON_COPY_SS)
 
         # Create layouts
 
@@ -172,12 +155,13 @@ class FileProcessingWidget(QWidget):
 
         # Create a horizontal layout for error_log and copy_errors_button
         errors_layout = QHBoxLayout()
-        errors_layout.addWidget(self.error_log_scroll_area)
+        errors_layout.addWidget(self.error_log_text)
         errors_layout.addWidget(self.copy_2_button)
 
         # Create a basic vertical layout
         self.layout = QVBoxLayout()
         self.layout.addLayout(process_layout)
+        self.layout.addSpacing(16)
         self.layout.addLayout(result_layout)
         self.layout.addLayout(errors_layout)
 
@@ -195,14 +179,10 @@ class FileProcessingWidget(QWidget):
             self.result_text.setText("Result:")
             self.error_log_text.setText("Error Log:")
 
-
-            t1 = time.time()
             # Create a background thread to execute combine_data
             self.worker_thread = WorkerThread(selected_files)
             self.worker_thread.result_ready.connect(self.handle_worker_thread_result)
             self.worker_thread.start()
-            t2 = time.time()
-            print(t2-t1)
 
         else:
             self.result_text.setText("No files selected")
@@ -220,48 +200,65 @@ class FileProcessingWidget(QWidget):
         tr = metrics[f'{TEMPLATES_TITLES["total_received"]}']
         er = metrics['exchange_rate']
 
-        self.result_text.setPlainText(f"Tournaments: {metrics['tournaments_n']}\n"
-                                      f"Total entries: {metrics['total_entries_n']} "
-                                      f"(re-entries: {metrics['re_entries_n']})\n"
-                                      f"Buy-in (total): USD {bi['total']['convert']} (USD: {bi['total']['USD']}, "
-                                      f"EUR {bi['total']['EUR']}, CNY {bi['total']['CNY']})\n"
-                                      f"Buy-in (first entries): USD {bi['first_entries']['convert']} "
-                                      f"(USD: {bi['first_entries']['USD']}, EUR {bi['first_entries']['EUR']}, "
-                                      f"CNY {bi['first_entries']['CNY']})\n"
-                                      f"Buy-in (re-entries): USD {bi['re_entries']['convert']} "
-                                      f"(USD: {bi['re_entries']['USD']}, EUR {bi['re_entries']['EUR']}, "
-                                      f"CNY {bi['re_entries']['CNY']})\n"
-                                      f"Total received: USD {tr['convert']} (USD: {tr['USD']}, EUR {tr['EUR']}, "
-                                      f"CNY {tr['CNY']})\n"
-                                      f"Profit: {metrics['profit']}\n"
-                                      f"Exchanges rate: 1 EUR = {er['EUR']} USD; 1 CNY = {er['CNY']} USD")
+        if metrics['tournaments_n'] > 0:
+            self.result_text.setPlainText(f"Tournaments: {metrics['tournaments_n']}\n"
+                                          f"Total entries: {metrics['total_entries_n']} "
+                                          f"(re-entries: {metrics['re_entries_n']})\n"
+                                          f"Buy-in (total): USD {bi['total']['convert']} (USD: {bi['total']['USD']}, "
+                                          f"EUR {bi['total']['EUR']}, CNY {bi['total']['CNY']})\n"
+                                          f"Buy-in (first entries): USD {bi['first_entries']['convert']} "
+                                          f"(USD: {bi['first_entries']['USD']}, EUR {bi['first_entries']['EUR']}, "
+                                          f"CNY {bi['first_entries']['CNY']})\n"
+                                          f"Buy-in (re-entries): USD {bi['re_entries']['convert']} "
+                                          f"(USD: {bi['re_entries']['USD']}, EUR {bi['re_entries']['EUR']}, "
+                                          f"CNY {bi['re_entries']['CNY']})\n"
+                                          f"Total received: USD {tr['convert']} (USD: {tr['USD']}, EUR {tr['EUR']}, "
+                                          f"CNY {tr['CNY']})\n"
+                                          f"Profit: {metrics['profit']}\n"
+                                          f"Exchanges rate: 1 EUR = {er['EUR']} USD; 1 CNY = {er['CNY']} USD")
+        else:
+            self.result_text.setPlainText("No appropriate files found")
 
         errors_check = sum([0] + [1 for value in errors.values() if value])
 
         if errors_check:
+            self.error_log_text.setStyleSheet(style_sheets.ERRORS_LOG_1_SS)
+
             errors_log_message = ''
+            end = '_' * 60 + '\n\n'
 
             ge = errors['general_errors']
             if ge:
                 ers = '\n'.join(e for e in ge)
                 errors_log_message += f"General errors:\n{ers}\n"
+                errors_log_message += end
 
             d = errors['duplicates']
             if d:
                 errors_log_message += f"Duplicates detected: {d}\n"
+                errors_log_message += end
+
+            nt = errors['no_txt']
+            if nt:
+                errors_log_message += f"Inappropriate files detected: {nt}\n"
+                errors_log_message += end
 
             fe = errors['file_errors']
             if fe:
                 errors_log_message += "File errors:\n"
+                part_end = '_' * 20 + '\n'
                 for e in fe:
                     ers = '\n'.join(er for er in e['errors'])
                     errors_log_message += f"File: {e['file']}\n" \
                                           f"Content:\n{e['content']}\n" \
                                           f"Errors:\n{ers}\n"
+                    errors_log_message += part_end
+                errors_log_message += end
 
             self.error_log_text.setPlainText(errors_log_message)
 
         else:
+            self.error_log_text.setStyleSheet(style_sheets.ERRORS_LOG_0_SS)
             self.error_log_text.setPlainText("No errors found")
 
     def copy_result_to_clipboard(self):
@@ -280,10 +277,10 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
 
         self.setWindowTitle('PSD Combiner')
-        self.setGeometry(240, 180, 800, 680)
-        self.setMinimumSize(600, 640)
+        self.setGeometry(240, 180, 900, 680)
+        self.setMinimumSize(600, 660)
 
-        app_icon = QIcon("static/img/2222.ico")
+        app_icon = QIcon("static/img/favicon.ico")
         self.setWindowIcon(app_icon)
 
         self.setStyleSheet("background-color: #627F7A;")
