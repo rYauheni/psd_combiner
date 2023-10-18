@@ -9,11 +9,6 @@ from utils.rounding_func import round_dec
 from c_converter.currencies import CURRENCIES_SYMBOLS_CODES_DICT, CURRENCIES_SYMBOLS
 from c_converter.сonverter import set_rates, get_rates, convert
 
-# del
-import pprint
-
-pp = pprint.PrettyPrinter(indent=4)
-
 
 def combine_data(selected_files):
     tournament_checklist = []
@@ -21,6 +16,7 @@ def combine_data(selected_files):
     errors = {
         'general_errors': [],
         'duplicates': 0,
+        'no_txt': 0,
         'file_errors': []
     }
 
@@ -35,9 +31,9 @@ def combine_data(selected_files):
     for file_path in selected_files:
         result = parse_file(file_path)
         if not result:
+            errors['no_txt'] += 1
             continue
 
-        # pp.pprint(result)
         if not result['errors']:
             if result['content'] in tournament_checklist:
                 errors['duplicates'] += 1
@@ -90,10 +86,6 @@ def combine_data(selected_files):
                         metrics[f'{TEMPLATES_TITLES["buy_in"]}']['total']['convert']
 
     metrics = rounding_metrics_values(metrics)
-
-    # pp.pprint(metrics)
-    #
-    # pp.pprint(errors)
 
     return metrics, errors
 
@@ -241,7 +233,7 @@ def parse_line_alt(line, alt_result):
     symbols = CURRENCIES_SYMBOLS
     line = line.lower()
 
-    # buy-in template
+    # buy-in template and currency template
     if 'buy-in' in line:
         try:
             for symbol in symbols:
@@ -262,7 +254,7 @@ def parse_line_alt(line, alt_result):
         except Exception as e:
             alt_result['errors'].append(get_error_message('buy_in', str(e)))
 
-    # currency template and knock out prize (total received template)
+    # knock out prize (total received template)
     elif 'hero' in line:
         try:
             for symbol in symbols:
@@ -314,7 +306,7 @@ def parse_line_alt(line, alt_result):
             alt_result['data']['total_received']['quantity'] += 1
 
     # re-entry template
-    if 're-entries' in line:  # 'if' is correct (not 'elif')
+    if 're-entries' in line:  # 'if' is special_instance (not 'elif')
         try:
             elements = re.search(r'(\d+)\sre-entries', line)
             if elements:
