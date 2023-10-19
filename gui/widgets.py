@@ -42,6 +42,7 @@ class HeaderWidget(QWidget):
         font = QFont("Roboto", 24, QFont.Bold)
         self.header_main.setFont(font)
         self.header_main.setStyleSheet("color: white;")
+        self.setStyleSheet("background: transparent;")
 
         # Create a QLabel for image
         self.header_image = QLabel(self)
@@ -82,6 +83,8 @@ class FileSelectionWidget(QWidget):
         self.layout.addWidget(self.select_files_button)
         self.layout.addWidget(self.selected_files_label)
         self.setLayout(self.layout)
+
+        self.setStyleSheet("background: transparent;")
 
     def select_files(self):
         options = QFileDialog.Options()
@@ -219,8 +222,8 @@ class FileProcessingWidget(QWidget):
                                           f"CNY {bi['re_entries']['CNY']})\n"
                                           f"Total received: USD {tr['convert']} (USD: {tr['USD']}, EUR {tr['EUR']}, "
                                           f"CNY {tr['CNY']})\n"
-                                          f"Profit: {metrics['profit']}\n"
-                                          f"Exchanges rate: 1 EUR = {er['EUR']} USD; 1 CNY = {er['CNY']} USD")
+                                          f"Profit: USD {metrics['profit']}\n"
+                                          f"Exchange rates: 1 EUR = {er['EUR']} USD; 1 CNY = {er['CNY']} USD")
         else:
             self.result_text.setPlainText("No appropriate files found")
 
