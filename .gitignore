@@ -4,3 +4,5 @@
 /media/
 /.env
 /tests/instances/common_instances/
+/build/
+/tests/instances/from_customer_readfiles/
