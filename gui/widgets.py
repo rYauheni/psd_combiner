@@ -105,6 +105,8 @@ class FileProcessingWidget(QWidget):
     def __init__(self, file_selection_widget):
         super().__init__()
 
+        self.metrics_data = None
+
         self.file_selection_widget = file_selection_widget
 
         # Create a button to start file processing
@@ -120,6 +122,7 @@ class FileProcessingWidget(QWidget):
         self.animation_label = QLabel(self)
         self.movie = QMovie('static/gif/processing.gif')  # Укажите путь к вашей анимации
         self.animation_label.setMovie(self.movie)
+        self.animation_label.setStyleSheet("background: transparent;")
         self.animation_label.hide()
 
         # Create a text area to display the result of file processing
@@ -128,12 +131,19 @@ class FileProcessingWidget(QWidget):
         self.result_text.setStyleSheet(style_sheets.RESULT_SS)
         self.result_text.setFixedHeight(170)
 
-        # Create a copy button to copy the result
+        # Create a button to copy the result
         self.copy_button = QPushButton(self)
         self.copy_button.setText("Copy")
         self.copy_button.setMaximumWidth(100)
         self.copy_button.clicked.connect(self.copy_result_to_clipboard)
         self.copy_button.setStyleSheet(style_sheets.BUTTON_COPY_SS)
+
+        # Create a button to export the result
+        self.export_button = QPushButton(self)
+        self.export_button.setText("Export")
+        self.export_button.setMaximumWidth(100)
+        self.export_button.clicked.connect(self.export_result)
+        self.export_button.setStyleSheet(style_sheets.BUTTON_COPY_SS)
 
         # Create a text area to display errors when processing files
         self.error_log_text = QTextBrowser(self)
@@ -141,7 +151,7 @@ class FileProcessingWidget(QWidget):
         self.error_log_text.setStyleSheet(style_sheets.ERRORS_LOG_BASE_SS)
         self.error_log_text.setFixedHeight(100)
 
-        # Create a copy button to copy the error_log
+        # Create a button to copy the error_log
         self.copy_2_button = QPushButton(self)
         self.copy_2_button.setText("Copy")
         self.copy_2_button.setMaximumWidth(100)
@@ -156,10 +166,15 @@ class FileProcessingWidget(QWidget):
         process_layout.addWidget(self.animation_label)
         process_layout.setAlignment(Qt.AlignLeft)
 
-        # Create a horizontal layout for result_label and copy_button
+        # Create a vertical layout for copy_button and export_button
+        copy_export_layout = QVBoxLayout()
+        copy_export_layout.addWidget(self.copy_button)
+        copy_export_layout.addWidget(self.export_button)
+
+        # Create a horizontal layout for result_label and copy_export_layout
         result_layout = QHBoxLayout()
         result_layout.addWidget(self.result_text)
-        result_layout.addWidget(self.copy_button)
+        result_layout.addLayout(copy_export_layout)
 
         # Create a horizontal layout for error_log and copy_errors_button
         errors_layout = QHBoxLayout()
@@ -203,6 +218,8 @@ class FileProcessingWidget(QWidget):
 
         metrics = result[0]
         errors = result[1]
+
+        self.metrics_data = metrics
 
         bi = metrics[f'{TEMPLATES_TITLES["buy_in"]}']
         tr = metrics[f'{TEMPLATES_TITLES["total_received"]}']
@@ -272,6 +289,24 @@ class FileProcessingWidget(QWidget):
 
     def copy_result_to_clipboard(self):
         text = self.result_text.toPlainText()
+        clipboard = QApplication.clipboard()
+        clipboard.setText(text)
+
+    def export_result(self):
+        result = self.metrics_data
+
+        bi = result[f'{TEMPLATES_TITLES["buy_in"]}']
+        tr = result[f'{TEMPLATES_TITLES["total_received"]}']
+
+        text = f"Tournaments\t{result['tournaments_n']}\n" \
+               f"Total entries\t{result['total_entries_n']}\n" \
+               f"Re-entries\t{result['re_entries_n']}\n" \
+               f"Buy-in, $\t{str(bi['total']['convert']).replace('.', ',')}\n" \
+               f"Buy-in (first entries), $\t{str(bi['first_entries']['convert']).replace('.', ',')}\n" \
+               f"Buy-in (re-entries), $\t{str(bi['re_entries']['convert']).replace('.', ',')}\n" \
+               f"Total received, $\t{str(tr['convert']).replace('.', ',')}\n" \
+               f"Profit, $\t{str(result['profit']).replace('.', ',')}\n"
+
         clipboard = QApplication.clipboard()
         clipboard.setText(text)
 
