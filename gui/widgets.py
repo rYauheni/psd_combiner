@@ -237,8 +237,8 @@ class FileProcessingWidget(QWidget):
                                           f"Buy-in (re-entries): USD {bi['re_entries']['convert']} "
                                           f"(USD: {bi['re_entries']['USD']}, EUR {bi['re_entries']['EUR']}, "
                                           f"CNY {bi['re_entries']['CNY']})\n"
-                                          f"Total received: USD {tr['convert']} (USD: {tr['USD']}, EUR {tr['EUR']}, "
-                                          f"CNY {tr['CNY']})\n"
+                                          f"Total received: USD {tr['convert']} (USD: {tr['USD']}, "
+                                          f"Cash_USD: {tr['CASH_USD']}, EUR {tr['EUR']}, CNY {tr['CNY']})\n"
                                           f"Profit: USD {metrics['profit']}\n"
                                           f"Exchange rates: 1 EUR = {er['EUR']} USD; 1 CNY = {er['CNY']} USD")
         else:

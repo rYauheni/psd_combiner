@@ -6,7 +6,7 @@ from parse_templates.parse_templates_list import TEMPLATES_TITLES, PARSE_TEMPLAT
 from utils.errors_messages import get_error_message, get_general_error_message
 from utils.rounding_func import round_dec
 
-from c_converter.currencies import CURRENCIES_SYMBOLS_CODES_DICT, CURRENCIES_SYMBOLS
+from c_converter.currencies import CURRENCIES_SYMBOLS_CODES_DICT, CURRENCIES_SYMBOLS, CASH_USD_SYMBOL, CASH_USD
 from c_converter.сonverter import set_rates, get_rates, convert
 
 
@@ -30,6 +30,13 @@ def combine_data(selected_files):
 
     for file_path in selected_files:
         result = parse_file(file_path)
+        #
+        # f = result['file']
+        # bi = result['data']['buy_in']['value']
+        # tr = result['data']['total_received']['value']
+        #
+        # print(f'buy-in={bi}, tr={tr}, file={f}')
+
         if not result:
             errors['no_txt'] += 1
             continue
@@ -65,9 +72,11 @@ def combine_data(selected_files):
 
             # TOTAL_RECEIVED
             total_received = result['data'][f'{TEMPLATES_TITLES["total_received"]}']['value']
+            if result['cash_usd_check'] and currency_code == 'USD':
+                currency_code = CASH_USD
             metrics[f'{TEMPLATES_TITLES["total_received"]}'][currency_code] += total_received
             # CURRENCY CONVERTING FOR TOTAL RECEIVED
-            if currency_code == 'USD':
+            if currency_code in ('USD', CASH_USD):
                 convert_total_received = total_received
             else:
                 convert_total_received = convert(currency=currency_code, amount=total_received)
@@ -113,6 +122,9 @@ def create_metrics() -> dict:
         'exchange_rate': {'USD': 1.0}
     }
 
+    metrics[f'{TEMPLATES_TITLES["total_received"]}'] = \
+        metrics[f'{TEMPLATES_TITLES["total_received"]}'] | {f'{CASH_USD}': 0}
+
     return metrics
 
 
@@ -147,6 +159,9 @@ def parse_file(file_path):
                 for line in lines:
                     if line == '\n':
                         continue
+                    if CASH_USD_SYMBOL in line:
+                        result['cash_usd_check'] = True
+                        line = line.replace(CASH_USD_SYMBOL, '$')
                     result['content'] += line
                     result = parse_line(line=line, templates=PARSE_TEMPLATES, result=result)
 
@@ -155,7 +170,6 @@ def parse_file(file_path):
                 # processing files that do not correspond to standard PARSE_TEMPLATES
                 if result['errors']:
                     alt_result = create_result()
-                    lines = [line.replace('C$', '$') for line in lines]
 
                     if 'freeroll' in lines[0].lower():
                         pt_list = list(PARSE_TEMPLATES)
@@ -163,12 +177,16 @@ def parse_file(file_path):
                         index_t_buy_in = pt_list.index(t_buy_in)
                         pt_list.pop(index_t_buy_in)
 
-                        alt_result['data']['buy_in']['value'] = 0
-                        alt_result['data']['buy_in']['quantity'] = 1
+                        alt_result['data'][f'{TEMPLATES_TITLES["buy_in"]}']['value'] = 0
+                        alt_result['data'][f'{TEMPLATES_TITLES["buy_in"]}']['quantity'] = 1
 
                         for line in lines:
                             if line == '\n':
                                 continue
+                            if CASH_USD_SYMBOL in line:
+                                alt_result['cash_usd_check'] = True
+                                line = line.replace(CASH_USD_SYMBOL, '$')
+
                             alt_result['content'] += line
                             alt_result = parse_line(line=line, templates=pt_list, result=alt_result)
 
@@ -177,6 +195,9 @@ def parse_file(file_path):
                         for line in lines:
                             if line == '\n':
                                 continue
+                            if CASH_USD_SYMBOL in line:
+                                alt_result['cash_usd_check'] = True
+                                line = line.replace(CASH_USD_SYMBOL, '$')
                             alt_result['content'] += line
                             alt_result = parse_line_alt(line=line, alt_result=alt_result)
 
@@ -198,6 +219,7 @@ def create_result() -> dict:
         'file': '',
         'content': '',
         'data': copy.deepcopy(data),
+        'cash_usd_check': False,
         'errors': []
     }
 
@@ -239,18 +261,26 @@ def parse_line_alt(line, alt_result):
             for symbol in symbols:
                 if symbol in line:
                     currency = symbol
-                    alt_result['data']['currency']['value'] = currency
-                    alt_result['data']['currency']['quantity'] += 1
+                    alt_result['data'][f'{TEMPLATES_TITLES["currency"]}']['value'] = currency
+                    alt_result['data'][f'{TEMPLATES_TITLES["currency"]}']['quantity'] += 1
 
             elements = re.findall(r'\d+\.\d+|\d+', line)
             elements = [elem.replace(',', '') for elem in elements]
+            bi_base = round_dec(sum(float(elem) for elem in elements))
+            add = 0
             if '¥' in line:
                 add = 4.5
-            else:
-                add = 0
-            buy_in = sum(float(elem) for elem in elements) + add
-            alt_result['data']['buy_in']['value'] += buy_in
-            alt_result['data']['buy_in']['quantity'] += 1
+            elif '$' in line:
+                if bi_base == 25.0:
+                    add = 0
+                elif bi_base == 48.5:
+                    add = 1.5
+            buy_in = bi_base + add
+            alt_result['data'][f'{TEMPLATES_TITLES["buy_in"]}']['value'] += buy_in
+            alt_result['data'][f'{TEMPLATES_TITLES["buy_in"]}']['quantity'] += 1
+
+            alt_result['data'][f'{TEMPLATES_TITLES["bi_check"]}']['value'] += buy_in
+            alt_result['data'][f'{TEMPLATES_TITLES["bi_check"]}']['quantity'] += 1
         except Exception as e:
             alt_result['errors'].append(get_error_message('buy_in', str(e)))
 
@@ -263,12 +293,12 @@ def parse_line_alt(line, alt_result):
 
                     try:
                         currency_escaped = re.escape(currency)
-                        find_prize = line.count(currency_escaped)
+                        find_prize = line.count(currency)
                         if find_prize == 2:
-                            elements = re.findall(fr'{currency_escaped}(\d+)', line)
+                            elements = re.findall(fr'{currency_escaped}(\d+\.\d+|\d+)', line)
                             prize = float(elements[1].replace(',', ''))
-                            alt_result['data']['total_received']['value'] += prize
-                            alt_result['data']['total_received']['quantity'] += 1
+                            alt_result['data'][f'{TEMPLATES_TITLES["total_received"]}']['value'] += prize
+                            alt_result['data'][f'{TEMPLATES_TITLES["total_received"]}']['quantity'] += 1
                     except Exception as e:
                         alt_result['errors'].append(get_error_message('total_received', str(e)))
 
@@ -281,9 +311,9 @@ def parse_line_alt(line, alt_result):
     elif 'received a total' in line:
         try:
             if 'chips' in line:
-                alt_result['data']['total_received']['value'] += 0
-                if not alt_result['data']['total_received']['quantity']:
-                    alt_result['data']['total_received']['quantity'] += 1
+                alt_result['data'][f'{TEMPLATES_TITLES["total_received"]}']['value'] += 0
+                if not alt_result['data'][f'{TEMPLATES_TITLES["total_received"]}']['quantity']:
+                    alt_result['data'][f'{TEMPLATES_TITLES["total_received"]}']['quantity'] += 1
             else:
                 for symbol in symbols:
                     if symbol in line:
@@ -291,9 +321,9 @@ def parse_line_alt(line, alt_result):
                         elements = re.search(fr'{currency}([\d,]+(?:\.\d+)?)', line)
                         if elements:
                             prize = float(elements.group(1).replace(',', ''))
-                            alt_result['data']['total_received']['value'] += prize
-                            if not alt_result['data']['total_received']['quantity']:
-                                alt_result['data']['total_received']['quantity'] += 1
+                            alt_result['data'][f'{TEMPLATES_TITLES["total_received"]}']['value'] += prize
+                            if not alt_result['data'][f'{TEMPLATES_TITLES["total_received"]}']['quantity']:
+                                alt_result['data'][f'{TEMPLATES_TITLES["total_received"]}']['quantity'] += 1
 
                         break
         except Exception as e:
@@ -301,9 +331,9 @@ def parse_line_alt(line, alt_result):
 
     # total received template
     elif 'chips' in line:
-        alt_result['data']['total_received']['value'] += 0
-        if not alt_result['data']['total_received']['quantity']:
-            alt_result['data']['total_received']['quantity'] += 1
+        alt_result['data'][f'{TEMPLATES_TITLES["total_received"]}']['value'] += 0
+        if not alt_result['data'][f'{TEMPLATES_TITLES["total_received"]}']['quantity']:
+            alt_result['data'][f'{TEMPLATES_TITLES["total_received"]}']['quantity'] += 1
 
     # re-entry template
     if 're-entries' in line:  # 'if' is special_instance (not 'elif')
@@ -311,8 +341,8 @@ def parse_line_alt(line, alt_result):
             elements = re.search(r'(\d+)\sre-entries', line)
             if elements:
                 re_entries = int(elements.group(1))
-                alt_result['data']['re_entry']['value'] += re_entries
-                alt_result['data']['re_entry']['quantity'] += 1
+                alt_result['data'][f'{TEMPLATES_TITLES["re_entry"]}']['value'] += re_entries
+                alt_result['data'][f'{TEMPLATES_TITLES["re_entry"]}']['quantity'] += 1
         except Exception as e:
             alt_result['errors'].append(get_error_message('re_entry', str(e)))
 
@@ -325,3 +355,18 @@ def check_errors(result):
             result['errors'].append(get_error_message(tt, 'multiple'))
         elif tt_data['quantity'] == 0 and tt_data['template'].required:
             result['errors'].append(get_error_message(tt, 'notfound'))
+
+    buy_in = result['data'][f'{TEMPLATES_TITLES["buy_in"]}']['value']
+    bi_check = result['data'][f'{TEMPLATES_TITLES["bi_check"]}']['value']
+
+    if buy_in == 0 and bi_check == 0:
+        pass
+    elif buy_in == 0 or bi_check == 0:
+        result['errors'].append(get_error_message(TEMPLATES_TITLES["buy_in"], 'notfound'))
+    else:
+        try:
+            check = buy_in / bi_check
+            if not (0.7 < check < 1.3):
+                result['errors'].append(get_error_message(TEMPLATES_TITLES["buy_in"], 'notfound'))
+        except Exception as e:
+            result['errors'].append(get_error_message(f'{TEMPLATES_TITLES["buy_in"]}', f'{e}'))

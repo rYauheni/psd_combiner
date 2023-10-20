@@ -1,8 +1,10 @@
 from parse_templates.parse_template import ParseTemplate
+from parse_templates.bi_check_type import bi_check_type
 from c_converter.currencies import CURRENCIES_SYMBOLS
 
 TEMPLATES_TITLES = {
     'buy_in': 'buy_in',
+    'bi_check': 'bi_check',
     'currency': 'currency',
     'total_received': 'total_received',
     're_entry': 're_entry'
@@ -16,6 +18,15 @@ PARSE_TEMPLATES = (
         end=r' ',
         required=True,
         ttype=float
+    ),
+
+    ParseTemplate(
+        title=f'{TEMPLATES_TITLES["bi_check"]}',
+        detector=r'(?i)buy-in: ',
+        start=fr'[{CURRENCIES_SYMBOLS}]',
+        end=r'$',
+        required=True,
+        ttype=bi_check_type
     ),
 
     ParseTemplate(

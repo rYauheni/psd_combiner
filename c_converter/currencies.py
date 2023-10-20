@@ -5,3 +5,7 @@ CURRENCIES_SYMBOLS_CODES_DICT = {
     '€': 'EUR',
     '¥': 'CNY'
 }
+
+CASH_USD_SYMBOL = 'C$'
+
+CASH_USD = 'CASH_USD'
