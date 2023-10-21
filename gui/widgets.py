@@ -143,7 +143,7 @@ class FileProcessingWidget(QWidget):
         self.export_button.setText("Export")
         self.export_button.setMaximumWidth(100)
         self.export_button.clicked.connect(self.export_result)
-        self.export_button.setStyleSheet(style_sheets.BUTTON_COPY_SS)
+        self.export_button.setStyleSheet(style_sheets.BUTTON_EXPORT_SS)
 
         # Create a text area to display errors when processing files
         self.error_log_text = QTextBrowser(self)

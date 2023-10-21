@@ -76,7 +76,24 @@ BUTTON_COPY_SS = """
             font-weight: bold;
             cursor: pointer;
             margin-left: 0;
-            max-width: 60%;
+            }
+            QPushButton:pressed {
+               background-color: #1B8366;
+            }
+        """
+
+BUTTON_EXPORT_SS = """
+            QPushButton {
+            padding: 12px 10px;
+            box-sizing: border-box;
+            border: 4px solid #1B8366;
+            border-radius: 20px;
+            background-color: #3BB08F;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 0;
             }
             QPushButton:pressed {
                background-color: #1B8366;
