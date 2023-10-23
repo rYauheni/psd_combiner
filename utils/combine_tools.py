@@ -10,7 +10,13 @@ from c_converter.currencies import CURRENCIES_SYMBOLS_CODES_DICT, CURRENCIES_SYM
 from c_converter.сonverter import set_rates, get_rates, convert
 
 
-def combine_data(selected_files):
+def combine_data(selected_files) -> tuple[dict, dict]:
+    """
+    Collects and summarizes data from all parsed files.
+    If the file is parsed correctly, the data is transferred to the metrics dict; elif it is transferred to errors dict.
+    :param selected_files:
+    :return: tuple[dict, dict]
+    """
     tournament_checklist = []
     metrics = create_metrics()
     errors = {
@@ -30,12 +36,6 @@ def combine_data(selected_files):
 
     for file_path in selected_files:
         result = parse_file(file_path)
-        #
-        # f = result['file']
-        # bi = result['data']['buy_in']['value']
-        # tr = result['data']['total_received']['value']
-        #
-        # print(f'buy-in={bi}, tr={tr}, file={f}')
 
         if not result:
             errors['no_txt'] += 1
@@ -100,6 +100,10 @@ def combine_data(selected_files):
 
 
 def create_metrics() -> dict:
+    """
+    Creates a dict-type storage for aggregate metrics for all correctly recognized files
+    :return: dict
+    """
     currency_metric_dict = {'convert': 0} | {code: 0 for code in CURRENCIES_SYMBOLS_CODES_DICT.values()}
 
     finance_metric_dict = {
@@ -128,7 +132,12 @@ def create_metrics() -> dict:
     return metrics
 
 
-def rounding_metrics_values(metrics) -> dict:
+def rounding_metrics_values(metrics: dict) -> dict:
+    """
+    Rounds buy_in, total_received, profit values from the metrics dict to two decimal places
+    :param metrics: dict
+    :return: dict
+    """
     # BUY_IN
     for top_key, stat in metrics[f'{TEMPLATES_TITLES["buy_in"]}'].items():
         for bot_key, value in stat.items():
@@ -147,7 +156,12 @@ def rounding_metrics_values(metrics) -> dict:
     return metrics
 
 
-def parse_file(file_path):
+def parse_file(file_path: str) -> (dict, None):
+    """
+    Parse file. If the file is .txt returns a dict with the parsing result, elif returns None
+    :param file_path: str
+    :return: (dict, None)
+    """
     file_extension = os.path.splitext(file_path)[1]
     if file_extension == '.txt':
         result = create_result()
@@ -156,6 +170,8 @@ def parse_file(file_path):
             with open(file_path, 'r', encoding='utf-8') as file:
                 result['file'] = os.path.basename(file.name)
                 lines = file.readlines()
+
+                # Processing files that correspond to standard PARSE_TEMPLATES
                 for line in lines:
                     if line == '\n':
                         continue
@@ -167,7 +183,7 @@ def parse_file(file_path):
 
                 check_errors(result=result)
 
-                # processing files that do not correspond to standard PARSE_TEMPLATES
+                # Processing files that do not correspond to standard PARSE_TEMPLATES
                 if result['errors']:
                     alt_result = create_result()
 
@@ -213,6 +229,10 @@ def parse_file(file_path):
 
 
 def create_result() -> dict:
+    """
+    Creates a dict-type storage for aggregate data for single correctly recognized file
+    :return: dict
+    """
     data = {template.title: {'template': template, 'value': 0, 'quantity': 0} for template in PARSE_TEMPLATES}
 
     result = {
@@ -226,7 +246,14 @@ def create_result() -> dict:
     return result
 
 
-def parse_line(line, templates, result):
+def parse_line(line: str, templates: (tuple, list), result: dict) -> dict:
+    """
+    Parses file lines according to the standard template PARSE_TEMPLATES
+    :param line: str
+    :param templates: (tuple, list)
+    :param result: dict
+    :return: dict
+    """
     for template in templates:
         tt = template.title
         if re.search(template.detector, line):
@@ -251,7 +278,13 @@ def parse_line(line, templates, result):
     return result
 
 
-def parse_line_alt(line, alt_result):
+def parse_line_alt(line: str, alt_result: dict) -> dict:
+    """
+    Parses file lines that do not match the standard template PARSE_TEMPLATES
+    :param line: str
+    :param alt_result: dict
+    :return: dict
+    """
     symbols = CURRENCIES_SYMBOLS
     line = line.lower()
 
@@ -349,7 +382,13 @@ def parse_line_alt(line, alt_result):
     return alt_result
 
 
-def check_errors(result):
+def check_errors(result: dict) -> None:
+    """
+    Checks result dict for errors
+    :param result: dict
+    :return: dict
+    """
+    # Checks for multiple occurrences of templates and missing necessary templates
     for tt, tt_data in result['data'].items():
         if tt_data['quantity'] > 1:
             result['errors'].append(get_error_message(tt, 'multiple'))
@@ -359,6 +398,7 @@ def check_errors(result):
     buy_in = result['data'][f'{TEMPLATES_TITLES["buy_in"]}']['value']
     bi_check = result['data'][f'{TEMPLATES_TITLES["bi_check"]}']['value']
 
+    # Checks for buy_in template inconsistencies from the first line of the second
     if buy_in == 0 and bi_check == 0:
         pass
     elif buy_in == 0 or bi_check == 0:

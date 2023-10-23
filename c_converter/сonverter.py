@@ -21,6 +21,10 @@ currencies = tuple(c for c in CURRENCIES_SYMBOLS_CODES_DICT.values() if c != 'US
 
 
 def set_exchange_rates():
+    """
+    Set base exchange rates from google finance.
+    :return: None
+    """
     for currency in currencies:
         add_url = fr'{currency}-USD'
         url = BASE_URL + add_url
@@ -36,6 +40,10 @@ def set_exchange_rates():
 
 
 def set_exchange_rates_static():
+    """
+    Set additional exchange rates, if base exchange rates can not set.
+    :return: None
+    """
     c = CurrencyConverter()
     for currency in currencies:
         rate = c.convert(1, currency, 'USD')
@@ -43,6 +51,10 @@ def set_exchange_rates_static():
 
 
 def set_rates():
+    """
+    Set all types of exchanges rates/
+    :return: int
+    """
     if not EXCHANGE_RATE:
         try:
             set_exchange_rates()
@@ -57,6 +69,10 @@ def set_rates():
 
 
 def get_rates():
+    """
+    Returns exchange rate.
+    :return: dict
+    """
     if not EXCHANGE_RATE and not EXCHANGE_RATE_STATIC:
         set_rates()
     if EXCHANGE_RATE:
@@ -66,7 +82,13 @@ def get_rates():
     return EXCHANGED_RATE_FIXED
 
 
-def convert(currency, amount):
+def convert(currency: str, amount: float) -> float:
+    """
+    Converts the value of the selected currency into USD/
+    :param currency: str
+    :param amount: float
+    :return: float
+    """
     try:
         rate = float(EXCHANGE_RATE[currency])
     except Exception:
