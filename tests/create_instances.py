@@ -19,7 +19,7 @@ def create_directories():
 
 def generate_filename(length=16, extension=".txt"):
     characters = string.ascii_letters + string.digits
-    random_name = ''.join(random.choice(characters) for i in range(length))
+    random_name = ''.join(random.choice(characters) for _ in range(length))
     filename = random_name + extension
 
     return filename
