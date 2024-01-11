@@ -67,6 +67,20 @@ For Linux:
    ```commandline
    python3 main.py
    ```
+
+### Added instances for tests
+
+For Windows:
+
+   ```commandline
+   python -m tests.create_instances
+   ```
+
+For Linux:
+
+   ```commandline
+   python3 -m tests.create_instances
+   ```
 ___
 
 ## Launch for production
